@@ -77,7 +77,7 @@ bot.getMe().then((botInfo) => {
 }).catch((err) => {
   console.error("Bot ma'lumotini olishda xatolik:", err.message);
 });
-adminPanel(bot)
+adminPanel(bot, userStates);
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true

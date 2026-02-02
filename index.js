@@ -193,11 +193,11 @@ function mainMenu() {
 function backButton() {
   return {
     reply_markup: {
-      inline_keyboard: [
-        [{ text: '🚫 Bekor qilish', callback_data: 'backtomain' }]
-      ]
+      inline_keyboard: [[
+        { text: '🚫 Bekor qilish', callback_data: 'backtomain' }
+      ]]
     }
-  }
+  };
 }
 async function referalMenu(userId) {
   const user = await getUser(userId);
@@ -280,7 +280,7 @@ if (data === 'get_stars') {
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
     `<b>⭐ Stars olish</b>\n<b>⬇️ Minimal: 2 ta</b>\n<b>⬆️ Maksimal: 5 ta </b>\n\n<blockquote>⭐️ 1 star narxi: 3 ta referal</blockquote>\n\nIltimos, stars sonini yuboring (masalan: 2):`,
-    { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', backButton() }
+    { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', ...backButton() }
   );
   userStates.set(userId, { state: 'waiting_for_star_count' }); 
   return;
@@ -294,7 +294,7 @@ if (data === 'add_subscribers') {
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
     `<b>👥 Obunachi qo‘shish</b>\n<b>⬇️ Minimal: 50 ta </b>\n<b>⬆️ Maksimal: 200 ta</b>\n<blockquote>10 ta obunachi narxi: 2 ta referal</blockquote>\n\nIltimos, obunachilar sonini yuboring (masalan: 50):`,
-    { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', backButton() }
+    { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', ...backButton() }
   );
   userStates.set(userId, { state: 'waiting_for_sub_count' }); 
   return;
@@ -320,12 +320,12 @@ if (data === 'add_subscribers') {
   }
    if(data === 'backtomain') {
     await bot.answerCallbackQuery(callbackQuery.id);
+     userStates.delete(userId);
     return bot.editMessageText('Asosiy menyu', {
       chat_id: chatId,
       message_id: msg.message_id,
       ...mainMenu()
     });
-     userStates.delete(userId);
    }
   if (data === 'ref_count') {
     const user = await getUser(userId);

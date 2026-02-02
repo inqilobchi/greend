@@ -142,42 +142,36 @@ async function getUser(userId) {
 }
 
 async function addUser(userId, referrerId = null) {
-  let exists = await getUser(userId);
-  if (exists) return exists;
+  // Upsert: Agar mavjud bo'lsa, top; yo'q bo'lsa, yarat
+  let user = await User.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: { referals: [], referalCount: 0, referrer: null } },
+    { upsert: true, new: true }
+  );
 
-  const userDoc = new User({
-    userId,
-    referals: [],
-    referalCount: 0,
-    referrer: null
-  });
+  if (referrerId && referrerId !== userId && !user.referrer) { // Agar referrer hali o'rnatilmagan bo'lsa
+    // Referrer ni ham upsert bilan yaratish
+    let referrer = await User.findOneAndUpdate(
+      { userId: referrerId },
+      { $setOnInsert: { referals: [], referalCount: 0, referrer: null } },
+      { upsert: true, new: true }
+    );
 
-if (referrerId && referrerId !== userId) {
-  const referrer = await getUser(referrerId);
+    // User ga referrer o'rnatish
+    user.referrer = referrerId;
+    await user.save();
 
-  if (referrer) {
-    userDoc.referrer = referrerId;
+    // Referrer ga referal qo'shish
     await User.updateOne(
       { userId: referrerId },
       { $addToSet: { referals: userId }, $inc: { referalCount: 1 } }
     );
-  } else {
-    // Agar referrer bazada yo'q bo‘lsa, uni yaratamiz
-    await addUser(referrerId);
-    await User.updateOne(
-      { userId: referrerId },
-      { $addToSet: { referals: userId }, $inc: { referalCount: 1 } }
-    );
+
+    // Referal haqida xabar yuborish
+    bot.sendMessage(referrerId, `<b>🎉 Sizga yangi referal qo'shildi!</b>\n<a href='tg://user?id=${userId}'>👤Ro'yxatdan o'tdi : ${userId}</a>`, { parse_mode: 'HTML' });
   }
 
-  userDoc.referrer = referrerId;
-
-  // Referal haqida xabar
-  bot.sendMessage(referrerId, `<b>🎉 Sizga yangi referal qo'shildi!</b>\n<a href='tg://user?id=${userId}'>👤Ro'yxatdan o'tdi : ${userId}</a> `, {parse_mode : 'HTML'});
-}
-
-  await userDoc.save();
-  return userDoc;
+  return user;
 }
 
 async function decrementReferals(userId, count = 5) {

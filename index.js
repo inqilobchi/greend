@@ -235,7 +235,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   
   await addUser(userId, referrerId);
-  await bot.sendMessage(chatId, `⭐️`, mainMenu());
+  await bot.sendMessage(chatId, `🌱`, mainMenu());
 });
 
 bot.on('callback_query', async (callbackQuery) => {

@@ -183,7 +183,7 @@ function mainMenu() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '📝 Buyurtma berish', callback_data: 'place_order' }],
+        [{ text: '🛒 Buyurtma berish', callback_data: 'place_order' }],
         [{text: `🌹 Sovg'a olish 🧸`, callback_data : 'get_gift'}],
         [{ text: '👥 Referal tizimi 🔖', callback_data: 'ref_system' }],
       ]
@@ -227,7 +227,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   
   await addUser(userId, referrerId);
-  await bot.sendMessage(chatId, `🐳`, mainMenu());
+  await bot.sendMessage(chatId, `⭐️`, mainMenu());
 });
 
 bot.on('callback_query', async (callbackQuery) => {
@@ -271,7 +271,7 @@ if (data === 'get_stars') {
   }
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
-    `<b>⭐ Stars olish</b>\nMinimal: 2 ta, Maksimal: 5 ta\n1 star narxi: 3 ta referal\n\nIltimos, stars sonini yuboring (masalan: 2):`,
+    `<b>⭐ Stars olish</b>\n<b>⬇️ Minimal: 2 ta</b>\n<b>⬆️ Maksimal: 5 ta </b>\n\n<blockquote>⭐️ 1 star narxi: 3 ta referal</blockquote>\n\nIltimos, stars sonini yuboring (masalan: 2):`,
     { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML' }
   );
   userStates.set(userId, { state: 'waiting_for_star_count' }); 
@@ -285,7 +285,7 @@ if (data === 'add_subscribers') {
   }
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
-    `<b>👥 Obunachi qo‘shish</b>\nMinimal: 50 ta, Maksimal: 200 ta\n10 ta obunachi narxi: 2 ta referal\n\nIltimos, obunachilar sonini yuboring (masalan: 50):`,
+    `<b>👥 Obunachi qo‘shish</b>\n<b>⬇️ Minimal: 50 ta </b>\n<b>⬆️ Maksimal: 200 ta</b>\n<blockquote>10 ta obunachi narxi: 2 ta referal</blockquote>\n\nIltimos, obunachilar sonini yuboring (masalan: 50):`,
     { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML' }
   );
   userStates.set(userId, { state: 'waiting_for_sub_count' }); 
@@ -499,7 +499,7 @@ bot.on('message', async (msg) => {
       const response = await fetch(`${API_URL}?${params.toString()}`);
       const data = await response.json();
       if (data.order) {
-        bot.sendMessage(chatId, `✅ Buyurtma berildi! Order ID: ${data.order}`);
+        bot.sendMessage(chatId, `✅ Buyurtma berildi!`);
       } else {
         bot.sendMessage(chatId, `❌ Xatolik: ${JSON.stringify(data)}`);
       }
@@ -522,7 +522,7 @@ bot.on('message', async (msg) => {
       return bot.sendMessage(chatId, `🚫 Yetarli referal yo‘q. Kerak: ${requiredReferals} ta.`);
     }
     userStates.set(userId, { state: 'waiting_for_sub_link', quantity });
-    return bot.sendMessage(chatId, '📎 Endi havolani yuboring:');
+    return bot.sendMessage(chatId, '📎 Endi ommaviy kanal havolasini yuboring:');
   }
 
   if (state.state === 'waiting_for_sub_link') {

@@ -15,7 +15,19 @@ const API_URL = 'https://seensms.uz/api/v1';
 const userStates = new Map(); 
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { webHook: true });
-
+const PRICES = {
+  stars: {
+    perStar: 3,          // 1 ta star = 3 referal
+    min: 2,
+    max: 5
+  },
+  subscribers: {
+    per10: 1,            // 10 ta obunachi = 1 referal (siz xohlagan holat)
+    min: 50,
+    max: 200,
+    step: 10             // 10 ga bo‘linishi shart
+  }
+};
 const WEBHOOK_PATH = `/webhook/${token}`;
 const FULL_WEBHOOK_URL = `${process.env.PUBLIC_URL}${WEBHOOK_PATH}`;
 
@@ -224,7 +236,7 @@ const gifts = {
 bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const referrerId = match ? parseInt(match[1], 10) : null;
+  const referrerId = match[1] ? parseInt(match[1], 10) : null;
   if (referrerId) {
     tempReferrers.set(userId, referrerId);
   }
@@ -279,7 +291,7 @@ if (data === 'get_stars') {
   }
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
-    `<b>⭐ Stars olish</b>\n<b>⬇️ Minimal: 2 ta</b>\n<b>⬆️ Maksimal: 5 ta </b>\n\n<blockquote>⭐️ 1 star narxi: 3 ta referal</blockquote>\n\nIltimos, stars sonini yuboring (masalan: 2):`,
+    `<b>⭐ Stars olish</b>\n<b>⬇️ Minimal: 2 ta</b>\n<b>⬆️ Maksimal: 5 ta </b>\n\n<blockquote>⭐️ 1 star narxi: ${PRICES.stars.perStar} ta referal</blockquote>\n\nIltimos, stars sonini yuboring (masalan: 2):`,
     { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', ...backButton() }
   );
   userStates.set(userId, { state: 'waiting_for_star_count' }); 
@@ -293,7 +305,7 @@ if (data === 'add_subscribers') {
   }
   await bot.answerCallbackQuery(callbackQuery.id);
   await bot.editMessageText(
-    `<b>👥 Obunachi qo‘shish</b>\n<b>⬇️ Minimal: 50 ta </b>\n<b>⬆️ Maksimal: 200 ta</b>\n<blockquote>10 ta obunachi narxi: 2 ta referal</blockquote>\n\nIltimos, obunachilar sonini yuboring (masalan: 50):`,
+    `<b>👥 Obunachi qo‘shish</b>\n<b>⬇️ Minimal: 50 ta </b>\n<b>⬆️ Maksimal: 200 ta</b>\n<blockquote>10 ta obunachi narxi: ${PRICES.subscribers.per10} ta referal</blockquote>\n\nIltimos, obunachilar sonini yuboring (masalan: 50):`,
     { chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', ...backButton() }
   );
   userStates.set(userId, { state: 'waiting_for_sub_count' }); 
@@ -478,10 +490,10 @@ bot.on('message', async (msg) => {
 
   if (state.state === 'waiting_for_star_count') {
     const quantity = parseInt(text, 10);
-    if (isNaN(quantity) || quantity < 2 || quantity > 5) {
-      return bot.sendMessage(chatId, '❌ Noto‘g‘ri son. Minimal 2, maksimal 5.');
+    if (isNaN(quantity) || quantity < PRICES.stars.min || quantity > PRICES.stars.max) {
+      return bot.sendMessage(chatId, `❌ Noto‘g‘ri son. Minimal ${PRICES.stars.min}, maksimal ${PRICES.stars.max}.`);
     }
-    const requiredReferals = quantity * 3;
+    const requiredReferals = quantity * PRICES.stars.perStar;
     const user = await getUser(userId);
     if (user.referalCount < requiredReferals) {
       userStates.delete(userId);
@@ -497,7 +509,7 @@ bot.on('message', async (msg) => {
       return bot.sendMessage(chatId, '❌ Noto‘g‘ri havola.');
     }
     const { quantity } = state;
-    const requiredReferals = quantity * 3;
+    const requiredReferals = quantity * PRICES.stars.perStar;
     const success = await decrementReferals(userId, requiredReferals);
     if (!success) {
       userStates.delete(userId);
@@ -528,10 +540,15 @@ bot.on('message', async (msg) => {
 
   if (state.state === 'waiting_for_sub_count') {
     const quantity = parseInt(text, 10);
-    if (isNaN(quantity) || quantity < 50 || quantity > 200 || quantity % 10 !== 0) {
-      return bot.sendMessage(chatId, '❌ Noto‘g‘ri son. Minimal 50, maksimal 200, 10 ga bo‘linadigan.');
+    if (
+    isNaN(quantity) ||
+    quantity < PRICES.subscribers.min ||
+    quantity > PRICES.subscribers.max ||
+    quantity % PRICES.subscribers.step !== 0
+  ) {
+      return bot.sendMessage(chatId, `❌ Noto‘g‘ri son. Minimal ${PRICES.subscribers.min}, maksimal ${PRICES.subscribers.max}, ${PRICES.subscribers.step} ga bo‘linadigan.`);
     }
-    const requiredReferals = (quantity / 10) * 2;
+    const requiredReferals = (quantity / 10) * PRICES.subscribers.per10;
     const user = await getUser(userId);
     if (user.referalCount < requiredReferals) {
       userStates.delete(userId);
@@ -547,7 +564,7 @@ bot.on('message', async (msg) => {
       return bot.sendMessage(chatId, '❌ Noto‘g‘ri havola.');
     }
     const { quantity } = state;
-    const requiredReferals = (quantity / 10) * 2;
+    const requiredReferals = (quantity / 10) * PRICES.subscribers.per10;
     const success = await decrementReferals(userId, requiredReferals);
     if (!success) {
       userStates.delete(userId);

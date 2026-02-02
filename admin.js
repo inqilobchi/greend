@@ -6,7 +6,7 @@ function isAdmin(userId) {
   return ADMIN_IDS.includes(String(userId));
 }
 
-module.exports = (bot) => {
+module.exports = (bot, userStates) => {  // userStates ni parametr sifatida qabul qilish
   // /panel komandasi
   bot.onText(/\/panel/, async (msg) => {
     const chatId = msg.chat.id;
@@ -69,64 +69,83 @@ Quyidagilardan birini tanlang:
 
     if (!isAdmin(userId)) return;
 
-    if (data === 'admin_add_ref' || data === 'admin_sub_ref') {
+    if (data === 'admin_add_ref') {
+      userStates.set(userId, { state: 'admin_waiting_for_add_ref' });
       bot.sendMessage(chatId, `📝 Iltimos, ID va miqdorni yuboring:\n\nMasalan: <code>123456789 5</code>`, {
         parse_mode: 'HTML'
       });
+      return bot.answerCallbackQuery(query.id);
+    }
 
-      bot.once('message', async (msg) => {
-        if (msg.chat.id !== chatId) return;
-        const [id, count] = msg.text.trim().split(' ');
-        const targetId = parseInt(id, 10);
-        const refCount = parseInt(count, 10);
-
-        if (isNaN(targetId) || isNaN(refCount)) {
-          return bot.sendMessage(chatId, '❌ Noto‘g‘ri format.');
-        }
-
-        const user = await User.findOne({ userId: targetId });
-        if (!user) return bot.sendMessage(chatId, '❌ Foydalanuvchi topilmadi.');
-
-        if (data === 'admin_add_ref') {
-          user.referalCount += refCount;
-          await user.save();
-          bot.sendMessage(chatId, `✅ ${refCount} referal qo‘shildi. Yangi balans: ${user.referalCount}`);
-        } else {
-          user.referalCount = Math.max(user.referalCount - refCount, 0);
-          await user.save();
-          bot.sendMessage(chatId, `✅ ${refCount} referal ayirildi. Yangi balans: ${user.referalCount}`);
-        }
+    if (data === 'admin_sub_ref') {
+      userStates.set(userId, { state: 'admin_waiting_for_sub_ref' });
+      bot.sendMessage(chatId, `📝 Iltimos, ID va miqdorni yuboring:\n\nMasalan: <code>123456789 5</code>`, {
+        parse_mode: 'HTML'
       });
+      return bot.answerCallbackQuery(query.id);
     }
 
     if (data === 'admin_broadcast') {
+      userStates.set(userId, { state: 'admin_waiting_for_broadcast' });
       bot.sendMessage(chatId, '📢 E’lon matnini (yoki video, rasm, audio, fayl) yuboring:');
+      return bot.answerCallbackQuery(query.id);
+    }
+  });
 
-      bot.once('message', async (msg) => {
-        if (msg.chat.id !== chatId) return;
-        const users = await User.find({}, 'userId');
+  // Yangi: Bot.on('message') da admin state larini boshqarish
+  bot.on('message', async (msg) => {
+    const userId = msg.from.id;
+    const chatId = msg.chat.id;
+    const state = userStates.get(userId);
+    if (!state || !state.state.startsWith('admin_')) return; // Faqat admin state lar uchun
 
-        for (const u of users) {
-          try {
-            if (msg.text) {
-              await bot.sendMessage(u.userId, msg.text);
-            } else if (msg.photo) {
-              const fileId = msg.photo[msg.photo.length - 1].file_id;
-              await bot.sendPhoto(u.userId, fileId, { caption: msg.caption });
-            } else if (msg.video) {
-              await bot.sendVideo(u.userId, msg.video.file_id, { caption: msg.caption });
-            } else if (msg.document) {
-              await bot.sendDocument(u.userId, msg.document.file_id, { caption: msg.caption });
-            } else {
-              continue;
-            }
-          } catch (err) {
-            console.error(`Foydalanuvchiga yuborilmadi: ${u.userId}`, err.message);
+    if (state.state === 'admin_waiting_for_add_ref' || state.state === 'admin_waiting_for_sub_ref') {
+      const [id, count] = msg.text.trim().split(' ');
+      const targetId = parseInt(id, 10);
+      const refCount = parseInt(count, 10);
+      if (isNaN(targetId) || isNaN(refCount)) {
+        return bot.sendMessage(chatId, '❌ Noto‘g‘ri format. Qayta urinib ko‘ring yoki /panel bosing.');
+      }
+      const user = await User.findOne({ userId: targetId });
+      if (!user) {
+        return bot.sendMessage(chatId, '❌ Foydalanuvchi topilmadi. Qayta urinib ko‘ring yoki /panel bosing.');
+      }
+      if (state.state === 'admin_waiting_for_add_ref') {
+        user.referalCount += refCount;
+        await user.save();
+        bot.sendMessage(chatId, `✅ ${refCount} referal qo‘shildi. Yangi balans: ${user.referalCount}`);
+      } else {
+        user.referalCount = Math.max(user.referalCount - refCount, 0);
+        await user.save();
+        bot.sendMessage(chatId, `✅ ${refCount} referal ayirildi. Yangi balans: ${user.referalCount}`);
+      }
+      userStates.delete(userId); // State ni tozalash
+      return;
+    }
+
+    if (state.state === 'admin_waiting_for_broadcast') {
+      const users = await User.find({}, 'userId');
+      for (const u of users) {
+        try {
+          if (msg.text) {
+            await bot.sendMessage(u.userId, msg.text);
+          } else if (msg.photo) {
+            const fileId = msg.photo[msg.photo.length - 1].file_id;
+            await bot.sendPhoto(u.userId, fileId, { caption: msg.caption });
+          } else if (msg.video) {
+            await bot.sendVideo(u.userId, msg.video.file_id, { caption: msg.caption });
+          } else if (msg.document) {
+            await bot.sendDocument(u.userId, msg.document.file_id, { caption: msg.caption });
+          } else {
+            continue;
           }
+        } catch (err) {
+          console.error(`Foydalanuvchiga yuborilmadi: ${u.userId}`, err.message);
         }
-
-        bot.sendMessage(chatId, '✅ E’lon barcha foydalanuvchilarga yuborildi.');
-      });
+      }
+      bot.sendMessage(chatId, '✅ E’lon barcha foydalanuvchilarga yuborildi.');
+      userStates.delete(userId); // State ni tozalash
+      return;
     }
   });
 };

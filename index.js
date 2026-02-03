@@ -17,7 +17,7 @@ const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { webHook: true });
 const PRICES = {
   stars: {
-    perStar: 3,          // 1 ta star = 3 referal
+    perStar: 5,          // 1 ta star = 3 referal
     min: 2,
     max: 5
   },

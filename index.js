@@ -122,7 +122,10 @@ async function getSubscriptionMessage() {
   } 
   const SUPPORT_BOT_LINK = 'https://t.me/TurfaSeenBot?start=user19';
   const SUPPORT_BOT_TITILE = 'Turfa Seen | Rasmiy🤖';
+  const PRIVATE_CHANNEL_LINK = 'https://t.me/+ye-1jYtfdsIzODUy';
+  const PRIVATE_CHANNEL_TITILE = '🟢 — O'zimcha';
   buttons.push([{ text: `${SUPPORT_BOT_TITILE}`, url: SUPPORT_BOT_LINK }]);  
+  buttons.push([{ text: `${PRIVATE_CHANNEL_TITILE}`, url: PRIVATE_CHANNEL_LINK }]);  
   buttons.push([{ text: '✅ Obuna bo‘ldim', callback_data: 'check_subscription' }]);
 
   return {
